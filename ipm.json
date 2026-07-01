@@ -1,0 +1,11 @@
+{
+  "projects": {
+    "global": "ignition/global/ignition/script-python"
+  },
+  "packages": {
+    "slowrm": {
+      "source": "global",
+      "exports": ["slowrm"]
+    }
+  }
+}

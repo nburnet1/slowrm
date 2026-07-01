@@ -1,0 +1,4 @@
+ipm/**/dist
+**/.resources
+site-packages/*
+ignition/global/com.*

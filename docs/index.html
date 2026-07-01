@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>slowrm - ORM for Ignition</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-dim: #8b949e;
+            --accent: #58a6ff;
+            --green: #3fb950;
+            --orange: #f97316;
+            --purple: #bc8cff;
+            --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', monospace;
+            --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        nav {
+            display: flex;
+            justify-content: flex-end;
+            padding: 20px 0;
+        }
+
+        nav a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        header {
+            padding: 60px 0 40px;
+            text-align: center;
+        }
+
+        .logo {
+            font-family: var(--mono);
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: -2px;
+        }
+
+        .tagline {
+            font-size: 1.25rem;
+            color: var(--text-dim);
+            margin-top: 12px;
+            max-width: 550px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .badges {
+            margin-top: 24px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 4px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+        }
+
+        section {
+            padding: 48px 0;
+        }
+
+        section + section {
+            border-top: 1px solid var(--border);
+        }
+
+        h2 {
+            font-family: var(--mono);
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        h2 .accent { color: var(--accent); }
+
+        p {
+            color: var(--text-dim);
+            margin-bottom: 16px;
+        }
+
+        .code-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px 24px;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            line-height: 1.7;
+            overflow-x: auto;
+            margin-bottom: 24px;
+        }
+
+        .code-block .comment { color: #6e7681; }
+        .code-block .keyword { color: var(--purple); }
+        .code-block .string { color: var(--green); }
+        .code-block .func { color: var(--accent); }
+        .code-block .cls { color: var(--orange); }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .feature {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .feature-title {
+            font-family: var(--mono);
+            font-size: 0.95rem;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .feature-desc {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+
+        .api-table th {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 2px solid var(--border);
+            font-family: var(--mono);
+            color: var(--accent);
+            font-size: 0.85rem;
+        }
+
+        .api-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dim);
+        }
+
+        .api-table td:first-child {
+            font-family: var(--mono);
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        footer {
+            padding: 48px 0;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer a:hover { text-decoration: underline; }
+
+        @keyframes crawl {
+            0% { transform: translateX(-20px) scaleX(-1); }
+            49.9% { transform: translateX(20px) scaleX(-1); }
+            50% { transform: translateX(20px) scaleX(1); }
+            99.9% { transform: translateX(-20px) scaleX(1); }
+            100% { transform: translateX(-20px) scaleX(-1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="https://github.com/nburnet1/slowrm">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                GitHub
+            </a>
+        </nav>
+
+        <header>
+            <div class="logo">slowrm</div>
+<pre style="font-family: monospace; letter-spacing: 0; white-space: pre; font-size: 0.65rem; color: var(--text-dim); margin-top: 12px; line-height: 1.2; animation: crawl 6s linear infinite; display: inline-block;">
+@              _________
+ \____        /         \
+ /    \      /   ____    \
+ \_    \    /   /    \    \
+   \    \  (    \__/  )    )
+    \    \  \ \______/    /
+     \    \  \           /
+      \____\__\_________/____"-_
+</pre>
+            <p class="tagline">A lightweight ORM for Ignition. SQLAlchemy Core + declarative models + Ignition's system.db.</p>
+            <div class="badges">
+                <span class="badge">jython 2.7</span>
+                <span class="badge">sqlalchemy 1.3</span>
+                <span class="badge">ignition 8.x</span>
+            </div>
+        </header>
+
+        <!-- Getting Started -->
+        <section>
+            <h2><span class="accent">#</span> Getting started</h2>
+            <div class="code-block">
+pip install --target ./site-packages slowrm
+            </div>
+            <p>See the <a href="https://docs.sqlalchemy.org/en/13/" style="color: var(--text);">SQLAlchemy 1.3 docs</a> for full Core and declarative API reference.</p>
+        </section>
+
+        <!-- Quick Example -->
+        <section>
+            <h2><span class="accent">#</span> Quick example</h2>
+            <div class="code-block">
+<span class="keyword">from</span> sqlalchemy.ext.declarative <span class="keyword">import</span> declarative_base<br>
+<span class="keyword">from</span> sqlalchemy <span class="keyword">import</span> Column, Integer, String, ForeignKey, select<br>
+<span class="keyword">from</span> sqlalchemy.orm <span class="keyword">import</span> relationship<br>
+<span class="keyword">from</span> slowrm <span class="keyword">import</span> Session, sync_schema<br>
+<br>
+Base = <span class="func">declarative_base</span>()<br>
+<br>
+<span class="keyword">class</span> <span class="cls">WorkOrder</span>(Base):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;__tablename__ = <span class="string">"work_orders"</span><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;id = Column(Integer, primary_key=True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;title = Column(String(255))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;status = Column(String(50))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;assignedTo = Column(<span class="string">"assigned_to"</span>, String(255))<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;line_items = relationship(<span class="string">"LineItem"</span>, cascade=<span class="string">"all, delete-orphan"</span>)<br>
+<br>
+<br>
+<span class="keyword">class</span> <span class="cls">LineItem</span>(Base):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;__tablename__ = <span class="string">"line_items"</span><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;id = Column(Integer, primary_key=True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;work_order_id = Column(Integer, ForeignKey(WorkOrder.id))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;description = Column(String(255))<br>
+<br>
+<br>
+<span class="comment"># Sync schema - creates tables or adds missing columns</span><br>
+<span class="func">sync_schema</span>([WorkOrder, LineItem], <span class="string">"MESDB"</span>)<br>
+<br>
+<span class="comment"># Insert</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo = WorkOrder(title=<span class="string">"Replace pump"</span>, status=<span class="string">"open"</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.add(wo)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()<br>
+<br>
+<span class="comment"># Read + Update</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo = session.get(WorkOrder, 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo.status = <span class="string">"complete"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()<br>
+<br>
+<span class="comment"># Cascade delete</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo = session.get(WorkOrder, 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.delete(wo)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()
+            </div>
+        </section>
+
+        <!-- Features -->
+        <section>
+            <h2><span class="accent">#</span> Features</h2>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-title">Object persistence</div>
+                    <div class="feature-desc">add(), get(), delete() with automatic dirty tracking. Mutate objects and commit.</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-title">Transaction management</div>
+                    <div class="feature-desc">Context manager over Ignition transactions. Commit or rollback as a unit.</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-title">Dialect-aware SQL</div>
+                    <div class="feature-desc">Auto-detects your datasource type. Generates correct SQL for Postgres, MySQL, MSSQL, SQLite.</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-title">Cascade deletes</div>
+                    <div class="feature-desc">Define relationships with cascade rules. Children are deleted automatically.</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-title">Relationship loading</div>
+                    <div class="feature-desc">session.load(wo, WorkOrder.line_items) - explicit eager loading via SQLAlchemy metadata.</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-title">Schema sync</div>
+                    <div class="feature-desc">sync_schema() creates tables and adds missing columns. No external migration tool needed.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- API -->
+        <section>
+            <h2><span class="accent">#</span> Session API</h2>
+            <table class="api-table">
+                <tr><th>Method</th><th>Description</th></tr>
+                <tr><td>add(instance)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base) -> None</span></td><td>Queue an object for INSERT on commit</td></tr>
+                <tr><td>merge(instance)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base) -> Base</span></td><td>INSERT if PK not found, UPDATE if exists</td></tr>
+                <tr><td>get(model, pk)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (type, int | tuple) -> Base | None</span></td><td>Load by primary key (cached in identity map)</td></tr>
+                <tr><td>delete(instance)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base) -> None</span></td><td>Queue for DELETE on commit (cascades if configured)</td></tr>
+                <tr><td>load(instance, rel)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base, attr | str) -> None</span></td><td>Eagerly load a relationship</td></tr>
+                <tr><td>query(stmt, params, model, as_dict, as_dataset)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Select, dict, type, bool, bool) -> list</span></td><td>Execute SELECT, return models/dicts/dataset</td></tr>
+                <tr><td>query_one(stmt, ...)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (...) -> Base | dict | None</span></td><td>Execute SELECT, return first row or None</td></tr>
+                <tr><td>execute(stmt, params)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (DML, dict) -> int</span></td><td>Execute INSERT/UPDATE/DELETE directly</td></tr>
+                <tr><td>execute_many(stmt, param_list)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (DML, list[dict]) -> int</span></td><td>Bulk execute in single DB call (for INSERTs)</td></tr>
+                <tr><td>flush()<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: () -> None</span></td><td>Flush pending inserts/updates/deletes</td></tr>
+                <tr><td>commit()<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: () -> None</span></td><td>Flush + commit transaction</td></tr>
+                <tr><td>rollback()<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: () -> None</span></td><td>Rollback transaction, discard pending changes</td></tr>
+                <tr><td>compile(stmt, params)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Select | DML, dict) -> tuple</span></td><td>Return (sql, params) without executing</td></tr>
+            </table>
+
+            <h2><span class="accent">#</span> Schema API</h2>
+            <table class="api-table">
+                <tr><th>Function</th><th>Description</th></tr>
+                <tr><td>sync_schema(models, db)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (list, str) -> list[str]</span></td><td>Create tables / add missing columns</td></tr>
+                <tr><td>create_all(models, db)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (list, str) -> list[str]</span></td><td>Create tables only (skip existing)</td></tr>
+                <tr><td>drop_all(models, db)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (list, str) -> list[str]</span></td><td>Drop tables</td></tr>
+            </table>
+        </section>
+
+        <!-- Session Modes -->
+        <section>
+            <h2><span class="accent">#</span> Session modes</h2>
+            <div class="code-block">
+<span class="comment"># Default: transactional, explicit commit</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.add(wo)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit() <span class="comment"># required, otherwise rollback on exit</span><br>
+<br>
+<span class="comment"># Autocommit: commits on clean exit</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>, autocommit=True) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.add(wo)<br>
+<br>
+<span class="comment"># Non-transactional: no tx opened, for read-only queries</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>, transactional=False) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;rows = session.query(stmt, model=WorkOrder)<br>
+<br>
+<span class="comment"># Without context manager</span><br>
+session = <span class="func">Session</span>(<span class="string">"MESDB"</span>)<br>
+<span class="keyword">try</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo = session.get(WorkOrder, 42)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo.status = <span class="string">"complete"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()<br>
+<span class="keyword">except</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.rollback()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">raise</span><br>
+<span class="keyword">finally</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.close()
+            </div>
+        </section>
+
+        <!-- Merge -->
+        <section>
+            <h2><span class="accent">#</span> Merge (upsert)</h2>
+            <p>merge() inserts if the primary key doesn't exist, updates if it does.</p>
+            <div class="code-block">
+<span class="keyword">from</span> slowrm <span class="keyword">import</span> Session<br>
+<br>
+<span class="comment"># PK exists in DB -> UPDATE</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo = session.merge(WorkOrder(id=42, title=<span class="string">"Updated"</span>, status=<span class="string">"complete"</span>))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()<br>
+<br>
+<span class="comment"># PK doesn't exist in DB -> INSERT</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo = session.merge(WorkOrder(id=999, title=<span class="string">"Brand new"</span>, status=<span class="string">"open"</span>))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()<br>
+<br>
+<span class="comment"># No PK -> INSERT with autoincrement</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo = session.merge(WorkOrder(title=<span class="string">"Auto ID"</span>, status=<span class="string">"draft"</span>))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;print(wo.id) <span class="comment"># assigned by DB</span>
+            </div>
+        </section>
+
+        <!-- Column Mapping -->
+        <section>
+            <h2><span class="accent">#</span> Column name mapping</h2>
+            <p>Python attribute names and database column names are independent.</p>
+            <div class="code-block">
+<span class="keyword">class</span> <span class="cls">WorkOrder</span>(Base):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;__tablename__ = <span class="string">"work_orders"</span><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;id = Column(Integer, primary_key=True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;assignedTo = Column(<span class="string">"assigned_to"</span>, String(255)) <span class="comment"># camelCase in Python, snake_case in DB</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;createdAt = Column(<span class="string">"created_at"</span>, DateTime)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;status = Column(String(50)) <span class="comment"># same name both sides</span>
+            </div>
+        </section>
+
+        <!-- Relationships -->
+        <section>
+            <h2><span class="accent">#</span> Relationships</h2>
+            <div class="code-block">
+<span class="keyword">from</span> sqlalchemy.ext.declarative <span class="keyword">import</span> declarative_base<br>
+<span class="keyword">from</span> sqlalchemy <span class="keyword">import</span> Column, Integer, String, ForeignKey<br>
+<span class="keyword">from</span> sqlalchemy.orm <span class="keyword">import</span> relationship<br>
+<span class="keyword">from</span> slowrm <span class="keyword">import</span> Session, sync_schema<br>
+<br>
+Base = <span class="func">declarative_base</span>()<br>
+<br>
+<span class="keyword">class</span> <span class="cls">Department</span>(Base):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;__tablename__ = <span class="string">"departments"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;id = Column(Integer, primary_key=True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;name = Column(String(255))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;employees = relationship(<span class="string">"Employee"</span>, cascade=<span class="string">"all, delete-orphan"</span>)<br>
+<br>
+<span class="keyword">class</span> <span class="cls">Employee</span>(Base):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;__tablename__ = <span class="string">"employees"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;id = Column(Integer, primary_key=True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;department_id = Column(Integer, ForeignKey(Department.id))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;name = Column(String(255))<br>
+<br>
+<span class="func">sync_schema</span>([Department, Employee], <span class="string">"MESDB"</span>)<br>
+<br>
+<span class="comment"># Load relationship</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;dept = session.get(Department, 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.load(dept, Department.employees)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">for</span> emp <span class="keyword">in</span> dept.employees:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;print(emp.name)<br>
+<br>
+<span class="comment"># Cascade delete - removes department AND all employees</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;dept = session.get(Department, 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.delete(dept)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()
+            </div>
+        </section>
+
+        <!-- Composite Keys -->
+        <section>
+            <h2><span class="accent">#</span> Composite keys</h2>
+            <div class="code-block">
+<span class="keyword">from</span> sqlalchemy.ext.declarative <span class="keyword">import</span> declarative_base<br>
+<span class="keyword">from</span> sqlalchemy <span class="keyword">import</span> Column, Integer, String<br>
+<span class="keyword">from</span> slowrm <span class="keyword">import</span> Session, sync_schema<br>
+<br>
+Base = <span class="func">declarative_base</span>()<br>
+<br>
+<span class="keyword">class</span> <span class="cls">Tag</span>(Base):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;__tablename__ = <span class="string">"tags"</span><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;entity_type = Column(String(50), primary_key=True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;entity_id = Column(Integer, primary_key=True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;tag_name = Column(String(100), primary_key=True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;tag_value = Column(String(255))<br>
+<br>
+<span class="func">sync_schema</span>([Tag], <span class="string">"MESDB"</span>)<br>
+<br>
+<span class="comment"># All PK values must be provided (no autoincrement)</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;tag = Tag(entity_type=<span class="string">"employee"</span>, entity_id=1, tag_name=<span class="string">"skill"</span>, tag_value=<span class="string">"python"</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.add(tag)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()<br>
+<br>
+<span class="comment"># Get by composite key (tuple, in definition order)</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;tag = session.get(Tag, (<span class="string">"employee"</span>, 1, <span class="string">"skill"</span>))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;tag.tag_value = <span class="string">"jython"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()
+            </div>
+        </section>
+
+        <!-- Flush -->
+        <section>
+            <h2><span class="accent">#</span> Flush</h2>
+            <p>flush() writes pending changes to the database without committing the transaction. Useful when you need a generated ID before adding related objects.</p>
+            <div class="code-block">
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Create parent</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;dept = Department(name=<span class="string">"Engineering"</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.add(dept)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Flush to get the generated ID</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.flush()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;print(dept.id) <span class="comment"># now has a value</span><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Use that ID for children</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.add(Employee(department_id=dept.id, name=<span class="string">"Noah"</span>))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.add(Employee(department_id=dept.id, name=<span class="string">"Alex"</span>))<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Commit everything as one transaction</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()
+            </div>
+        </section>
+
+        <footer>
+            <p style="margin-bottom: 12px;">
+                <a href="https://github.com/nburnet1/slowrm" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                    nburnet1/slowrm
+                </a>
+            </p>
+            <p style="margin-bottom: 8px;">Built for the <a href="https://inductiveautomation.com">Ignition</a> community.</p>
+            <p style="margin-bottom: 8px; font-size: 0.8rem;">Package created with <a href="https://nburnet1.github.io/ignition-package-maker">ipm</a>.</p>
+            <p style="margin-bottom: 8px; font-size: 0.75rem;"><a href="https://www.asciiart.eu/art/8d540e8c392e2f46" style="color: var(--text-dim);">ascii snail</a></p>
+            <p style="font-size: 0.75rem;">Not affiliated with or endorsed by Inductive Automation.</p>
+        </footer>
+    </div>
+</body>
+</html>

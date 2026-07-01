@@ -1,0 +1,19 @@
+services:
+  ignition:
+    image: inductiveautomation/ignition:latest
+    ports:
+      - "8088:8088"
+      - "8043:8043"
+    environment:
+      ACCEPT_IGNITION_EULA: "Y"
+      IGNITION_EDITION: standard
+      GATEWAY_ADMIN_USERNAME: admin
+      GATEWAY_ADMIN_PASSWORD: password
+      DISABLE_QUICKSTART: true
+    volumes:
+      - ./ignition:/usr/local/bin/ignition/data/projects
+      - ./site-packages:/usr/local/bin/ignition/user-lib/pylib/site-packages
+      - ignition-test-data:/usr/local/bin/ignition/data
+
+volumes:
+  ignition-test-data:
