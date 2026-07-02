@@ -511,34 +511,50 @@ class Session(object):
     # ------------------------------------------------------------------
 
     def add(self, instance):
-        # type: (object) -> None
-        """Mark an instance for INSERT on next flush/commit.
+        # type: (object | list) -> None
+        """Mark instance(s) for INSERT on next flush/commit.
+
+        Accepts a single instance or a list.
 
         Example:
-            wo = WorkOrder(title="New", status="open")
-            uow.add(wo)
+            session.add(WorkOrder(title="New", status="open"))
+            session.add([LineItem(desc="A"), LineItem(desc="B")])
         """
         if self._closed:
             raise ValueError("Session is closed")
-        if instance not in self._new:
-            self._new.append(instance)
+        if isinstance(instance, (list, tuple)):
+            for item in instance:
+                if item not in self._new:
+                    self._new.append(item)
+        else:
+            if instance not in self._new:
+                self._new.append(instance)
 
-    def get(self, model, pk):
-        # type: (type, int | tuple) -> object | None
+    def get(self, model, pk, include=None):
+        # type: (type, int | tuple, list) -> object | None
         """Load an instance by primary key.
 
         Returns the cached instance from the identity map if already loaded,
         otherwise queries the database.
 
+        Args:
+            model: The model class.
+            pk: Primary key value (int or tuple for composite).
+            include: Optional list of relationships to eager-load.
+
         Example:
-            wo = uow.get(WorkOrder, 42)
+            wo = session.get(WorkOrder, 42)
+            wo = session.get(WorkOrder, 42, include=[WorkOrder.line_items])
         """
         if not isinstance(pk, tuple):
             pk = (pk,)
 
         key = (model, pk)
         if key in self._identity_map:
-            return self._identity_map[key]
+            instance = self._identity_map[key]
+            if include:
+                self.load(instance, include)
+            return instance
 
         pk_cols = _pk_columns(model)
         if len(pk_cols) != len(pk):
@@ -562,41 +578,56 @@ class Session(object):
         for row in results:
             row_dict = {col: row[col] for col in cols}
             instance = self._materialize(model, row_dict)
+            if include:
+                self.load(instance, include)
             return instance
 
         return None
 
     def delete(self, instance):
-        # type: (object) -> None
-        """Mark an instance for DELETE on next flush/commit.
+        # type: (object | list) -> None
+        """Mark instance(s) for DELETE on next flush/commit.
+
+        Accepts a single instance or a list.
 
         Example:
-            wo = session.get(WorkOrder, 42)
             session.delete(wo)
+            session.delete([li1, li2, li3])
         """
         if self._closed:
             raise ValueError("Session is closed")
-        if instance not in self._deleted:
-            self._deleted.append(instance)
+        if isinstance(instance, (list, tuple)):
+            for item in instance:
+                if item not in self._deleted:
+                    self._deleted.append(item)
+        else:
+            if instance not in self._deleted:
+                self._deleted.append(instance)
 
     def merge(self, instance):
-        # type: (object) -> object
-        """Merge an instance into the session.
+        # type: (object | list) -> object | list
+        """Merge instance(s) into the session.
 
         If the primary key exists in the database, update the existing row
         with the instance's current values. If not, insert it as new.
 
-        Returns the managed instance (either the existing one updated,
-        or the new one registered).
+        Accepts a single instance or a list.
+
+        Returns the managed instance(s).
 
         Example:
-            wo = WorkOrder(id=42, title="Updated", status="complete")
-            wo = session.merge(wo)
-            session.commit()
+            session.merge(WorkOrder(id=42, title="Updated", status="complete"))
+            session.merge([LineItem(id=1, desc="A"), LineItem(id=2, desc="B")])
         """
         if self._closed:
             raise ValueError("Session is closed")
 
+        if isinstance(instance, (list, tuple)):
+            return [self._merge_one(item) for item in instance]
+        return self._merge_one(instance)
+
+    def _merge_one(self, instance):
+        """Merge a single instance."""
         pk_cols = _pk_columns(instance.__class__)
         pk = tuple(getattr(instance, col.key, None) for col in pk_cols)
 
@@ -609,7 +640,6 @@ class Session(object):
         key = (instance.__class__, pk)
         if key in self._identity_map:
             existing = self._identity_map[key]
-            # Update existing instance with new values
             mapper = inspect(instance.__class__)
             for attr in mapper.column_attrs:
                 col = attr.columns[0]
@@ -622,7 +652,6 @@ class Session(object):
         # Try loading from database
         existing = self.get(instance.__class__, pk if len(pk) > 1 else pk[0])
         if existing is not None:
-            # Update loaded instance with new values
             mapper = inspect(instance.__class__)
             for attr in mapper.column_attrs:
                 col = attr.columns[0]
@@ -645,8 +674,8 @@ class Session(object):
         """Compile a statement using this session's datasource dialect."""
         return compile(stmt, params=params, dialect=self.dialect)
 
-    def query(self, stmt, params=None, model=None, as_dict=False, as_dataset=False):
-        # type: (object, dict, type, bool, bool) -> list
+    def query(self, stmt, params=None, model=None, as_dict=False, as_dataset=False, include=None):
+        # type: (object, dict, type, bool, bool, list) -> list
         """Execute a SELECT statement.
 
         Args:
@@ -655,6 +684,7 @@ class Session(object):
             model: Optional model class to materialize rows into.
             as_dict: Return rows as dictionaries.
             as_dataset: Return raw Ignition dataset.
+            include: Optional list of relationships to eager-load on results.
         """
         self._ensure_open()
         sql, ordered_params = self.compile(stmt, params)
@@ -670,17 +700,25 @@ class Session(object):
         rows = self._rows_as_dicts(results)
 
         if model is not None:
-            return [self._materialize(model, row) for row in rows]
+            instances = [self._materialize(model, row) for row in rows]
+            if include:
+                for instance in instances:
+                    self.load(instance, include)
+            return instances
 
         if not as_dict:
-            model = self._infer_model(stmt)
-            if model is not None:
-                return [self._materialize(model, row) for row in rows]
+            inferred = self._infer_model(stmt)
+            if inferred is not None:
+                instances = [self._materialize(inferred, row) for row in rows]
+                if include:
+                    for instance in instances:
+                        self.load(instance, include)
+                return instances
 
         return rows
 
-    def query_one(self, stmt, params=None, model=None, as_dict=False, as_dataset=False):
-        # type: (object, dict, type, bool, bool) -> object | dict | None
+    def query_one(self, stmt, params=None, model=None, as_dict=False, as_dataset=False, include=None):
+        # type: (object, dict, type, bool, bool, list) -> object | dict | None
         """Execute a SELECT and return the first row or None."""
         result = self.query(
             stmt.limit(1),
@@ -688,6 +726,7 @@ class Session(object):
             model=model,
             as_dict=as_dict,
             as_dataset=as_dataset,
+            include=include,
         )
         if as_dataset:
             return result

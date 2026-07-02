@@ -336,12 +336,12 @@ Base = <span class="func">declarative_base</span>()<br>
             <h2><span class="accent">#</span> Session API</h2>
             <table class="api-table">
                 <tr><th>Method</th><th>Description</th></tr>
-                <tr><td>add(instance)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base) -> None</span></td><td>Queue an object for INSERT on commit</td></tr>
-                <tr><td>merge(instance)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base) -> Base</span></td><td>INSERT if PK not found, UPDATE if exists</td></tr>
-                <tr><td>get(model, pk)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (type, int | tuple) -> Base | None</span></td><td>Load by primary key (cached in identity map)</td></tr>
-                <tr><td>delete(instance)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base) -> None</span></td><td>Queue for DELETE on commit (cascades if configured)</td></tr>
-                <tr><td>load(instance, rel)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base, attr | str) -> None</span></td><td>Eagerly load a relationship</td></tr>
-                <tr><td>query(stmt, params, model, as_dict, as_dataset)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Select, dict, type, bool, bool) -> list</span></td><td>Execute SELECT, return models/dicts/dataset</td></tr>
+                <tr><td>add(instance)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base | list) -> None</span></td><td>Queue object(s) for INSERT on commit</td></tr>
+                <tr><td>merge(instance)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base | list) -> Base | list</span></td><td>INSERT if PK not found, UPDATE if exists</td></tr>
+                <tr><td>get(model, pk, include)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (type, int | tuple, list) -> Base | None</span></td><td>Load by primary key with optional eager loading</td></tr>
+                <tr><td>delete(instance)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base | list) -> None</span></td><td>Queue object(s) for DELETE on commit (cascades if configured)</td></tr>
+                <tr><td>load(instance, rel)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Base, attr | str | list) -> None</span></td><td>Eagerly load relationship(s)</td></tr>
+                <tr><td>query(stmt, params, model, include, as_dict, as_dataset)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (Select, dict, type, list, bool, bool) -> list</span></td><td>Execute SELECT with optional eager loading</td></tr>
                 <tr><td>query_one(stmt, ...)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (...) -> Base | dict | None</span></td><td>Execute SELECT, return first row or None</td></tr>
                 <tr><td>execute(stmt, params)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (DML, dict) -> int</span></td><td>Execute INSERT/UPDATE/DELETE directly</td></tr>
                 <tr><td>execute_many(stmt, param_list)<br><span style="color: var(--text-dim); font-size: 0.8em;"># type: (DML, list[dict]) -> int</span></td><td>Bulk execute in single DB call (for INSERTs)</td></tr>
@@ -413,6 +413,63 @@ session = <span class="func">Session</span>(<span class="string">"MESDB"</span>)
 &nbsp;&nbsp;&nbsp;&nbsp;wo = session.merge(WorkOrder(title=<span class="string">"Auto ID"</span>, status=<span class="string">"draft"</span>))<br>
 &nbsp;&nbsp;&nbsp;&nbsp;session.commit()<br>
 &nbsp;&nbsp;&nbsp;&nbsp;print(wo.id) <span class="comment"># assigned by DB</span>
+            </div>
+        </section>
+
+        <!-- Eager Loading -->
+        <section>
+            <h2><span class="accent">#</span> Eager loading</h2>
+            <p>Use <code>include</code> on get(), query(), and query_one() to load relationships in the same session.</p>
+            <div class="code-block">
+<span class="comment"># Load a work order with its line items</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo = session.get(WorkOrder, 12, include=[WorkOrder.line_items])<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">for</span> li <span class="keyword">in</span> wo.line_items:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;print(li.description)<br>
+<br>
+<span class="comment"># Query with eager loading</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>, transactional=False) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;stmt = select([WorkOrder]).where(WorkOrder.status == <span class="string">"open"</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;rows = session.query(stmt, model=WorkOrder, include=[WorkOrder.line_items])<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">for</span> wo <span class="keyword">in</span> rows:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;print(wo.title, len(wo.line_items))<br>
+<br>
+<span class="comment"># Dirty tracking works on loaded children too</span><br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo = session.get(WorkOrder, 12, include=[WorkOrder.line_items])<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo.line_items[0].description = <span class="string">"Updated"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit() <span class="comment"># flushes UPDATE for the child</span>
+            </div>
+        </section>
+
+        <!-- Bulk Operations -->
+        <section>
+            <h2><span class="accent">#</span> Bulk operations</h2>
+            <p>add(), merge(), and delete() all accept a single instance or a list.</p>
+            <div class="code-block">
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Bulk add</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.add([<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LineItem(work_order_id=1, description=<span class="string">"Part A"</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LineItem(work_order_id=1, description=<span class="string">"Part B"</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LineItem(work_order_id=1, description=<span class="string">"Part C"</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;])<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()<br>
+<br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Bulk merge (upsert)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.merge([<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WorkOrder(id=1, title=<span class="string">"Updated A"</span>, status=<span class="string">"closed"</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WorkOrder(id=2, title=<span class="string">"Updated B"</span>, status=<span class="string">"closed"</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WorkOrder(id=99, title=<span class="string">"New one"</span>, status=<span class="string">"open"</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;])<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()<br>
+<br>
+<span class="keyword">with</span> <span class="func">Session</span>(<span class="string">"MESDB"</span>) <span class="keyword">as</span> session:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Bulk delete</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;wo = session.get(WorkOrder, 1, include=[WorkOrder.line_items])<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.delete(wo.line_items)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;session.commit()
             </div>
         </section>
 
