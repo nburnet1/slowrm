@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "slowrm"
-version = "0.0.2"
+version = "0.0.3"
 description = "A lightweight ORM for Ignition. SQLAlchemy Core + declarative models + Ignition's system.db."
 keywords = ["jython", "ignition", "ignition-8.3", "ipm", "orm"]
 classifiers = [
