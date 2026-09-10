@@ -57,6 +57,9 @@ def _dialect_for_database(database):
 
     if db_type == "POSTGRES":
         dia = postgresql.dialect()
+        dia.postfetch_lastrowid = True
+        dia.implicit_returning = False
+        dia.preexecute_autoincrement_sequences = False
     elif db_type == "MYSQL":
         dia = mysql.dialect()
     elif db_type == "MSSQL":
@@ -685,6 +688,11 @@ class Session(object):
             as_dict: Return rows as dictionaries.
             as_dataset: Return raw Ignition dataset.
             include: Optional list of relationships to eager-load on results.
+
+        Example:
+            from sqlalchemy import select
+            stmt = select([WorkOrder]).where(WorkOrder.status == "open")
+            results = session.query(stmt)
         """
         self._ensure_open()
         sql, ordered_params = self.compile(stmt, params)
@@ -737,6 +745,11 @@ class Session(object):
         """Execute an INSERT/UPDATE/DELETE statement directly.
 
         Returns number of affected rows.
+
+        Example:
+            from sqlalchemy import update
+            stmt = update(WorkOrder).where(WorkOrder.id == 42).values(status="complete")
+            session.execute(stmt)
         """
         self._ensure_open()
         sql, ordered_params = self.compile(stmt, params)
